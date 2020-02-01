@@ -156,20 +156,23 @@ int sed_init(struct sed_device **dev, const char *dev_path)
 	int status = 0;
 	struct sed_device *ret;
 
-	ret = malloc(sizeof(*ret));
-
-	if (ret == NULL) {
-		return -ENOMEM;
+	if (dev_path == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide the device path.\n");
+		return -EINVAL;
 	}
 
-	status = curr_if->init_fn(ret, dev_path);
-	if (status != 0) {
-		sed_deinit(ret);
+	ret = malloc(sizeof(*ret));
+	if (ret == NULL)
+		return -ENOMEM;
 
+	status = curr_if->init_fn(ret, dev_path);
+	if (status) {
+		sed_deinit(ret);
 		return status;
 	}
 
 	*dev = ret;
+
 	return status;
 }
 
@@ -177,6 +180,11 @@ int  sed_level0_discovery(struct sed_opal_level0_discovery *discv)
 {
 	if (curr_if->lvl0_discv_fn == NULL)
 		return -EOPNOTSUPP;
+
+	if (discv == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide a valid pointer\n");
+		return -EINVAL;
+	}
 
 	curr_if->lvl0_discv_fn(discv);
 
@@ -215,16 +223,31 @@ int sed_key_init(struct sed_key *auth_key, const char *key, const uint8_t key_le
 
 int sed_takeownership(struct sed_device *dev, const struct sed_key *key)
 {
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->ownership_fn(dev, key);
 }
 
 int sed_setup_global_range(struct sed_device *dev, const struct sed_key *key)
 {
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->setup_global_range_fn(dev, key);
 }
 
 int sed_reverttper(struct sed_device *dev, const struct sed_key *key, bool psid)
 {
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->revert_fn(dev, key, psid);
 }
 
@@ -233,29 +256,54 @@ int sed_revertlsp(struct sed_device *dev, const struct sed_key *key, bool keep_g
 	if (curr_if->revertsp_fn == NULL)
 		return -EOPNOTSUPP;
 
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->revertsp_fn(dev, key, keep_global_rn_key);
 }
 
 int sed_activatelsp(struct sed_device *dev, const struct sed_key *key)
 {
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->activatelsp_fn(dev, key, NULL, false);
 }
 
 int sed_lock_unlock(struct sed_device *dev, const struct sed_key *key,
 		enum SED_ACCESS_TYPE lock_type)
 {
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->lock_unlock_fn(dev, key, lock_type);
 }
 
 int sed_addusertolr(struct sed_device *dev, const char *pass, uint8_t key_len,
 		    const char *user, enum SED_ACCESS_TYPE lock_type, uint8_t lr)
 {
+	if (dev == NULL || pass == NULL || user == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->addusr_to_lr_fn(dev, pass, key_len, user, lock_type, lr);
 }
 
 int sed_enableuser(struct sed_device *dev, const char *pass, uint8_t key_len,
 		   const char *user)
 {
+	if (dev == NULL || pass == NULL || user == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->activate_usr_fn(dev, pass, key_len, user);
 }
 
@@ -263,6 +311,11 @@ int sed_setuplr(struct sed_device *dev, const char *pass, uint8_t key_len,
 		const char *user, uint8_t lr, size_t range_start,
 		size_t range_length, bool sum, bool RLE, bool WLE)
 {
+	if (dev == NULL || pass == NULL || user == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->setuplr_fn(dev, pass, key_len, user, lr, range_start,
 				   range_length, sum, RLE, WLE);
 }
@@ -270,18 +323,33 @@ int sed_setuplr(struct sed_device *dev, const char *pass, uint8_t key_len,
 int sed_setpw(struct sed_device *dev, const struct sed_key *old_key,
 		const struct sed_key *new_key)
 {
+	if (dev == NULL || old_key == NULL || new_key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->set_pwd_fn(dev, old_key, new_key);
 }
 
 int sed_shadowmbr(struct sed_device *dev, const char *pass, uint8_t key_len,
 		  bool mbr)
 {
+	if (dev == NULL || pass == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->shadow_mbr_fn(dev, pass, key_len, mbr);
 }
 
 int sed_eraselr(struct sed_device *dev, const char *password,
 		uint8_t key_len, const char *user, const uint8_t lr, bool sum)
 {
+	if (dev == NULL || password == NULL || user == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->eraselr_fn(dev, password, key_len, user, lr, sum);
 }
 
@@ -290,6 +358,11 @@ int sed_ds_admin_write(struct sed_device *dev, const char *key, uint8_t key_len,
 {
 	if (curr_if->ds_admin_write_fn == NULL)
 		return -EOPNOTSUPP;
+
+	if (dev == NULL || key == NULL || from == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
 
 	return curr_if->ds_admin_write_fn(dev, key, key_len, from, size, offset);
 }
@@ -300,6 +373,11 @@ int sed_ds_admin_read(struct sed_device *dev, const char *key, uint8_t key_len,
 	if (curr_if->ds_admin_read_fn == NULL)
 		return -EOPNOTSUPP;
 
+	if (dev == NULL || key == NULL || to == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->ds_admin_read_fn(dev, key, key_len, to, size, offset);
 }
 
@@ -307,6 +385,11 @@ int sed_ds_anybody_read(struct sed_device *dev, uint8_t *to, uint32_t size, uint
 {
 	if (curr_if->ds_anybody_read_fn == NULL)
 		return -EOPNOTSUPP;
+
+	if (dev == NULL || to == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
 
 	return curr_if->ds_anybody_read_fn(dev, to, size, offset);
 }
@@ -316,6 +399,11 @@ int sed_ds_anybody_write(struct sed_device *dev, uint8_t *from, uint32_t size, u
 	if (curr_if->ds_anybody_write_fn == NULL)
 		return -EOPNOTSUPP;
 
+	if (dev == NULL || from == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->ds_anybody_write_fn(dev, from, size, offset);
 }
 
@@ -324,6 +412,11 @@ int sed_ds_add_anybody_get(struct sed_device *dev, const char *key, uint8_t key_
 	if (curr_if->ds_add_anybody_get_fn == NULL)
 		return -EOPNOTSUPP;
 
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
+
 	return curr_if->ds_add_anybody_get_fn(dev, key, key_len);
 }
 
@@ -331,6 +424,11 @@ int sed_list_lr(struct sed_device *dev, const char *key, uint8_t key_len)
 {
 	if (curr_if->list_lr_fn == NULL)
 		return -EOPNOTSUPP;
+
+	if (dev == NULL || key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide valid pointer\n");
+		return -EINVAL;
+	}
 
 	return curr_if->list_lr_fn(dev, key, key_len);
 }
