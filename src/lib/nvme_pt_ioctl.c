@@ -1642,11 +1642,6 @@ int opal_takeownership_pt(struct sed_device *dev, const struct sed_key *key)
 	size_t msid_pin_len = 0;
 	uint8_t msid_pin[SED_MAX_KEY_LEN];
 
-	if (key == NULL) {
-		SEDCLI_DEBUG_MSG("Must Provide a password.\n");
-		return -EINVAL;
-	}
-
 	opal_dev = dev->priv;
 
 	memset(msid_pin, 0, sizeof(msid_pin));
@@ -1680,11 +1675,6 @@ int opal_reverttper_pt(struct sed_device *dev, const struct sed_key *key,
 	struct opal_device *opal_dev;
 	int ret = 0, auth;
 
-	if (key == NULL) {
-		SEDCLI_DEBUG_MSG("Must Provide a password.\n");
-		return -EINVAL;
-	}
-
 	opal_dev = dev->priv;
 
 	auth = psid ? OPAL_PSID_UID : OPAL_SID_UID;
@@ -1709,11 +1699,11 @@ int opal_activate_lsp_pt(struct sed_device *dev, const struct sed_key *key,
 	uint8_t lr[OPAL_MAX_LRS];
 	struct opal_device *opal_dev;
 
-	if (key == NULL || (sum && lr_str)) {
-		SEDCLI_DEBUG_MSG("Must Provide a password, and a LR string "\
-				 " if SUM \n");
+	if ((sum && lr_str)) {
+		SEDCLI_DEBUG_MSG("Must Provide a LR string if SUM \n");
 		return -EINVAL;
 	}
+
 	opal_dev = dev->priv;
 	SEDCLI_DEBUG_PARAM("Sum is %d\n", sum);
 
@@ -1760,12 +1750,8 @@ int opal_revertlsp_pt(struct sed_device *dev, const struct sed_key *key, bool ke
 	int ret = 0;
 	struct opal_device *opal_dev;
 
-	if (key == NULL) {
-		SEDCLI_DEBUG_MSG("Must Provide a password.\n");
-		return -EINVAL;
-	}
-
 	opal_dev = dev->priv;
+
 	ret = opal_start_generic_session(dev->fd, opal_dev, OPAL_LOCKING_SP_UID, OPAL_ADMIN1_UID, key);
 	if (ret) {
 		opal_end_session(dev->fd, opal_dev);
@@ -1773,7 +1759,9 @@ int opal_revertlsp_pt(struct sed_device *dev, const struct sed_key *key, bool ke
 	}
 
 	ret = opal_revertlsp_local(dev->fd, opal_dev, keep_global_rn_key);
+
 	opal_end_session(dev->fd, opal_dev);
+
 	return ret;
 }
 
@@ -1785,10 +1773,11 @@ int opal_add_usr_to_lr_pt(struct sed_device *dev, const char *key, uint8_t key_l
 	struct opal_device *opal_dev;
 	uint32_t who, lk_type = lock_type;
 
-	if (lk_type > SED_NO_ACCESS || key == NULL || key_len == 0 || usr == NULL) {
-		SEDCLI_DEBUG_MSG("Need to supply user, lock type and password!\n");
+	if (lk_type > SED_NO_ACCESS || key_len == 0) {
+		SEDCLI_DEBUG_MSG("Need to supply a vlaid lock type and password!\n");
 		return -EINVAL;
 	}
+
 	opal_dev = dev->priv;
 
 	if (sed_get_user(usr, &who)) {
@@ -1819,16 +1808,10 @@ int opal_activate_usr_pt(struct sed_device *dev, const char *key, uint8_t key_le
 	struct opal_device *opal_dev;
 	uint32_t who;
 
-	if (user == NULL || key == NULL) {
-		SEDCLI_DEBUG_PARAM("Invalid arguments for %s, need to provide "\
-				"password and user.\n", __func__);
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
-	if (sed_get_user(user, &who)) {
+	if (sed_get_user(user, &who))
 		return -EINVAL;
-	}
 
 	if (who == OPAL_ADMIN1) {
 		SEDCLI_DEBUG_MSG("Opal Admin is already activated by default!\n");
@@ -1841,9 +1824,8 @@ int opal_activate_usr_pt(struct sed_device *dev, const char *key, uint8_t key_le
 	}
 
 	ret = sed_key_init(&disk_key, key, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
 	if (ret)
@@ -1866,24 +1848,20 @@ int opal_setuplr_pt(struct sed_device *dev, const char *key, uint8_t key_len,
 	uint32_t who;
 	int ret = 0;
 
-	if (range_start == ~0 || range_length == ~0 || (!sum && user == NULL) ||
-			key == NULL) {
+	if (range_start == ~0 || range_length == ~0 || (!sum && user == NULL)) {
 		SEDCLI_DEBUG_MSG("Incorrect parameters, please try again\n");
 		return -EINVAL;
 	}
 
 	opal_dev = dev->priv;
 
-	if (!sum) {
-		if (sed_get_user(user, &who)) {
+	if (!sum)
+		if (sed_get_user(user, &who))
 			return -EINVAL;
-		}
-	}
 
 	ret = sed_key_init(&disk_key, key, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_auth_session(dev->fd, opal_dev, sum, lr, who, &disk_key);
 	if (ret)
@@ -1903,8 +1881,8 @@ int opal_lock_unlock_pt(struct sed_device *dev, const struct sed_key *key,
 	struct opal_device *opal_dev;
 	uint32_t lk_type = lock_type;
 
-	if (lk_type > SED_NO_ACCESS || key == NULL) {
-		SEDCLI_DEBUG_MSG("Need to supply lock type and password!\n");
+	if (lk_type > SED_NO_ACCESS) {
+		SEDCLI_DEBUG_MSG("Need to supply a valid lock type\n");
 		return -EINVAL;
 	}
 
@@ -1917,7 +1895,6 @@ int opal_lock_unlock_pt(struct sed_device *dev, const struct sed_key *key,
 	ret = opal_lock_unlock_no_sum(dev->fd, opal_dev, lock_type, 0);
 
 end_sessn:
-
 	opal_end_session(dev->fd, opal_dev);
 	return ret;
 }
@@ -1929,11 +1906,11 @@ int opal_set_pwd_pt(struct sed_device *dev, const struct sed_key *old_key,
 	struct opal_device *opal_dev;
 	int ret = 0;
 
-	if (old_key == NULL || old_key->len == 0 || new_key == NULL ||
-			new_key->len == 0) {
-		SEDCLI_DEBUG_MSG("Invalid arguments, please try again\n");
+	if (old_key->len == 0 || new_key->len == 0) {
+		SEDCLI_DEBUG_MSG("Invalid key lengths, please try again\n");
 		return -EINVAL;
 	}
+
 	opal_dev = dev->priv;
 
 	ret = opal_start_auth_session(dev->fd, opal_dev, 0, 0, SED_ADMIN1, old_key);
@@ -1955,27 +1932,19 @@ int opal_shadow_mbr_pt(struct sed_device *dev, const char *password,
 	uint8_t en_dis, enable_disable;
 	struct opal_device *opal_dev;
 
-	if (password == NULL) {
-		SEDCLI_DEBUG_MSG("Need ADMIN1 password for mbr shadow "\
-				"enable/disable\n");
-		return -EINVAL;
-	}
-
 	opal_dev = dev->priv;
 
-	if (mbr) {
+	if (mbr)
 		enable_disable = OPAL_MBR_ENABLE;
-	} else {
+	else
 		enable_disable = OPAL_MBR_DISABLE;
-	}
 
 	en_dis = (enable_disable == OPAL_MBR_ENABLE) ? OPAL_TRUE :
 		OPAL_FALSE;
 
 	ret = sed_key_init(&disk_key, password, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
 	if (ret)
@@ -2008,23 +1977,21 @@ int opal_eraselr_pt(struct sed_device *dev, const char *password,
 	uint32_t who;
 	int ret = 0;
 
-	if ((!sum && user == NULL) || password == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide the password, user and locking "\
+	if ((!sum && user == NULL)) {
+		SEDCLI_DEBUG_MSG("Must provide the user and locking "\
 				"range to be erased.\n");
 		return -EINVAL;
 	}
+
 	opal_dev = dev->priv;
 
-	if (!sum) {
-		if (sed_get_user(user, &who)) {
+	if (!sum)
+		if (sed_get_user(user, &who))
 			return -EINVAL;
-		}
-	}
 
 	ret = sed_key_init(&disk_key, password, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_auth_session(dev->fd, opal_dev, sum, lr, who, &disk_key);
 	if (ret)
@@ -2043,21 +2010,15 @@ int opal_ds_admin_write(struct sed_device *dev, const char *key, uint8_t key_len
 	struct sed_key disk_key;
 	struct opal_device *opal_dev;
 
-	if (key == NULL || from == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide the password and a valid source pointer\n");
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
 	ret = sed_key_init(&disk_key, key, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
-	if (ret) {
+	if (ret)
 		goto end_sessn;
-	}
 
 	ret = opal_write_datastr(dev->fd, opal_dev, from, offset, size);
 
@@ -2072,21 +2033,15 @@ int opal_ds_admin_read(struct sed_device *dev, const char *key, uint8_t key_len,
 	struct sed_key disk_key;
 	struct opal_device *opal_dev;
 
-	if (key == NULL || to == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide the password and a valid destination pointer\n");
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
 	ret = sed_key_init(&disk_key, key, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
-	if (ret) {
+	if (ret)
 		goto end_sessn;
-	}
 
 	ret = opal_read_datastr(dev->fd, opal_dev, to, offset, size);
 
@@ -2100,16 +2055,11 @@ int opal_ds_anybody_read(struct sed_device *dev, uint8_t *to, uint32_t size, uin
 	int ret = 0;
 	struct opal_device *opal_dev;
 
-	if (to == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide a valid destination pointer\n");
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
 	ret = opal_start_anybody_session(dev->fd, opal_dev, OPAL_LOCKING_SP_UID);
-	if (ret) {
+	if (ret)
 		goto end_sessn;
-	}
 
 	ret = opal_read_datastr(dev->fd, opal_dev, to, offset, size);
 
@@ -2123,16 +2073,11 @@ int opal_ds_anybody_write(struct sed_device *dev, uint8_t *from, uint32_t size, 
 	int ret = 0;
 	struct opal_device *opal_dev;
 
-	if (from == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide a valid source pointer\n");
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
 	ret = opal_start_anybody_session(dev->fd, opal_dev, OPAL_LOCKING_SP_UID);
-	if (ret) {
+	if (ret)
 		goto end_sessn;
-	}
 
 	ret = opal_write_datastr(dev->fd, opal_dev, from, offset, size);
 
@@ -2169,18 +2114,13 @@ int opal_ds_add_anybody_get(struct sed_device *dev, const char *key, uint8_t key
 	struct sed_key disk_key;
 	struct opal_device *opal_dev;
 
-	if (key == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide password\n");
-		return -EINVAL;
-	}
 	opal_dev = dev->priv;
 
 	sed_key_init(&disk_key, key, key_len);
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
-	if (ret) {
-			goto end_sessn;
-	}
+	if (ret)
+		goto end_sessn;
 
 	prepare_req_buf(opal_dev, opal_ds_add_anybody_set_cmd, ARRAY_SIZE(opal_ds_add_anybody_set_cmd),
 			opal_uid[OPAL_ACE_DS_GET_ALL_UID], opal_method[OPAL_SET_METHOD_UID]);
@@ -2200,17 +2140,11 @@ int opal_list_lr_pt(struct sed_device *dev, const char *password, uint8_t key_le
 	struct opal_device *opal_dev;
 	int ret = 0;
 
-	if (password == NULL) {
-		SEDCLI_DEBUG_MSG("Must provide the password.\n");
-		return -EINVAL;
-	}
-
 	opal_dev = dev->priv;
 
 	ret = sed_key_init(&disk_key, password, key_len);
-	if (ret) {
+	if (ret)
 		return ret;
-	}
 
 	ret = opal_start_admin1_lsp_session(dev->fd, opal_dev, &disk_key);
 	if (ret)
