@@ -222,33 +222,46 @@ int sedopal_add_usr_to_lr(struct sed_device *dev, const char *key, uint8_t key_l
 				false, IOC_OPAL_ADD_USR_TO_LR);
 }
 
-int sedopal_shadowmbr(struct sed_device *dev, const char *password, uint8_t key_len,
-                      bool enable_mbr)
+int sedopal_mbrdone(struct sed_device *dev, const struct sed_key *key,
+		    bool mbr_done)
 {
-	struct sed_key key;
-	struct opal_mbr_data mbr = { };
-	int fd = dev->fd;
-	int ret = 0;
+	struct opal_mbr_done mbr = { };
 
-	if (password == NULL) {
-		SEDCLI_DEBUG_MSG("Need ADMIN1 password for mbr shadow "\
-				 "enable/disable\n");
+	if (key == NULL) {
+		SEDCLI_DEBUG_MSG("User must provide ADMIN1 password\n");
 		return -EINVAL;
 	}
 
+	if (mbr_done)
+		mbr.done_flag = OPAL_MBR_DONE;
+	else
+		mbr.done_flag = OPAL_MBR_NOT_DONE;
+
+	mbr.key.key_len = key->len;
+	memcpy(mbr.key.key, key->key, mbr.key.key_len);
+
+	return ioctl(dev->fd, IOC_OPAL_MBR_DONE, &mbr);
+}
+
+int sedopal_shadowmbr(struct sed_device *dev, const struct sed_key *key,
+		      bool enable_mbr)
+{
+	struct opal_mbr_data mbr = { };
+
+	if (key == NULL) {
+                SEDCLI_DEBUG_MSG("User must provide ADMIN1 password\n");
+                return -EINVAL;
+        }
+
 	if (enable_mbr)
 		mbr.enable_disable = OPAL_MBR_ENABLE;
-	else
+        else
 		mbr.enable_disable = OPAL_MBR_DISABLE;
 
-	ret = sed_key_init(&key, password, key_len);
-	if (ret) {
-		return ret;
-	}
-	mbr.key.key_len = key.len;
-	memcpy(mbr.key.key, key.key, mbr.key.key_len);
+	mbr.key.key_len = key->len;
+	memcpy(mbr.key.key, key->key, mbr.key.key_len);
 
-	return ioctl(fd, IOC_OPAL_ENABLE_DISABLE_MBR, &mbr);
+	return ioctl(dev->fd, IOC_OPAL_ENABLE_DISABLE_MBR, &mbr);
 }
 
 int sedopal_setpw(struct sed_device *dev, enum SED_AUTHORITY auth, const struct sed_key *old_key,
